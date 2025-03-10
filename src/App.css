@@ -1,4 +1,4 @@
-/* Wyzerowanie marginesów/paddingów */
+
 * {
   margin: 0;
   padding: 0;
@@ -15,7 +15,7 @@ body {
   flex-direction: column;
 }
 
-/* Główne kontenery centujące zawartość */
+
 .rounds, .game, .summary {
   display: flex;
   flex-direction: column;
@@ -68,7 +68,7 @@ input[type].liczbarund{
   width: 70%;
 }
 
-/* Przycisk */
+
 button {
   cursor: pointer;
   border: none;
@@ -87,7 +87,7 @@ button:hover {
   background-color: transparent;
 }
 
-/* Pola tekstowe */
+
 input[type="number"],
 input[type="text"] {
   background-color: transparent;
@@ -103,7 +103,6 @@ label {
   margin: 5px 0;
 }
 
-/* Kontener na pola inputów w trakcie gry */
 .inputs {
   display: flex;
   flex-direction: column;
@@ -111,7 +110,6 @@ label {
   margin-bottom: 20px;
 }
 
-/* Sekcja punktacji */
 .scores {
   margin-top: 20px;
   display: flex;
@@ -126,7 +124,6 @@ label {
   margin: 10px 0;
 }
 
-/* Etykieta nazwy kategorii (np. „Państwo:”) */
 .score-label {
   width: 100px;
   text-align: right;
@@ -134,23 +131,20 @@ label {
   font-weight: bold;
 }
 
-/* Grupa checkboxów w jednej linii */
 .checkbox-group {
   display: flex;
   flex-direction: row;
   gap: 1rem;
 }
 
-/* Opakowanie pojedynczego checkboxa */
 .checkbox-label {
-  display: inline-block;    /* lub flex, w zależności od potrzeb */
+  display: inline-block;   
   position: relative;
   margin: 5px;
 }
 
-/* Sam checkbox */
 .checkbox-label input[type="checkbox"] {
-  /* Usuwamy domyślny wygląd */
+
   appearance: none;         
   -webkit-appearance: none; 
   -moz-appearance: none;    
@@ -159,40 +153,35 @@ label {
   border: 1px solid white;
   background-color: transparent;
   cursor: pointer;
-  color: #fff;  /* kolor tekstu, który wstawimy przez ::before */
+  color: #fff;  
   text-align: center; 
   vertical-align: middle;
   border-radius: 5px;
 }
 
-/* 
-   Pseudoelement (treść pojawi się wizualnie
-   "w środku" samego inputa) 
-*/
+
 .checkbox-label input[type="checkbox"]::before {
-  content: attr(value);  /* Wstawiamy to, co jest w atrybucie "value" */
+  content: attr(value); 
   display: inline-block;
   width: 100%;
   text-align: center;
-  line-height: 31px; /* dostosuj, by tekst był wycentrowany w pionie */
+  line-height: 31px;
   font-size: 1rem;   
-  /* Zwróć uwagę, by line-height i font-size pasowały do rozmiaru boxa */
+
 }
 
-/* Styl checkboxa, gdy jest zaznaczony */
+
 .checkbox-label input[type="checkbox"]:checked {
-  background-color: white;     /* inny kolor tła, np. ciemniejszy */
+  background-color: white;  
   border-color: black; 
-  color: black;        /* i zmiana koloru obramowania */
+  color: black;      
 }
 
-/* Checkbox */
 input[type="checkbox"] {
   width: 20px;
   height: 16px;
 }
 
-/* Responsywność */
 @media (max-width: 600px) {
   input[type="text"],
   input[type="number"] {

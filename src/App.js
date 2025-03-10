@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
-  // Alfabet z pominięciem liter: Ą, Ć, Ę, Q, X, Y, Z
+
   const ALPHABET = [
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "Ł",
     "M", "N","O","P", "R", "S", "T", "U", "W"
   ];
 
-  // --- STANY APLIKACJI ---
+
 
   const [showMainMenu, setShowMainMenu] = useState(true);
   const [showRoundsMenu, setShowRoundsMenu] = useState(false);
@@ -16,7 +16,7 @@ function App() {
   const [currentRound, setCurrentRound] = useState("");
   const [usedLetters, setUsedLetters] = useState([]);
   const [currentLetter, setCurrentLetter] = useState("");
-  // W górnej części pliku (np. obok innych stałych):
+
 const categoryLabels = {
   panstwo: "Państwo",
   miasto: "Miasto",
@@ -40,21 +40,16 @@ const categoryLabels = {
 
   const [locked, setLocked] = useState(false);
 
-  // Przechowuje punkty z każdej rundy i kategorii
-  // Przykład struktury: [ { panstwo: X, miasto: Y, ... }, { ... }, ... ]
   const [allScores, setAllScores] = useState([]);
 
 
-  // --- FUNKCJE POMOCNICZE ---
 
-  // 1. Wczytanie stanu z localStorage przy pierwszym uruchomieniu
   useEffect(() => {
     const savedState = localStorage.getItem("panstwaMiastaGameState");
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
 
-        // Ustawiamy poszczególne stany tylko wtedy, gdy istnieją w zapisie
         setShowMainMenu(parsed.showMainMenu ?? true);
         setShowRoundsMenu(parsed.showRoundsMenu ?? false);
         setRounds(parsed.rounds ?? 0);
@@ -78,7 +73,7 @@ const categoryLabels = {
     }
   }, []);
 
-  // 2. Zapisywanie stanu do localStorage przy każdej zmianie wybranych stanów
+
   useEffect(() => {
     const stateToSave = {
       showMainMenu,
@@ -104,7 +99,6 @@ const categoryLabels = {
     allScores,
   ]);
 
-  // --- ROZPOCZĘCIE NOWEJ GRY ---
 
   const startNewGame = () => {
     setShowMainMenu(false);
@@ -126,8 +120,6 @@ const categoryLabels = {
     }
   };
 
-  // --- LOSOWANIE LITERY ---
-
   const drawLetter = () => {
     const availableLetters = ALPHABET.filter((letter) => !usedLetters.includes(letter));
     if (availableLetters.length === 0) {
@@ -140,8 +132,6 @@ const categoryLabels = {
     setUsedLetters((prev) => [...prev, letter]);
   };
 
-  // --- OBSŁUGA INPUTÓW ---
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (!locked) {
@@ -152,13 +142,11 @@ const categoryLabels = {
     }
   };
 
-  // --- ZATWIERDZENIE SŁÓW ---
 
   const lockWords = () => {
     setLocked(true);
   };
 
-  // --- CHECKBOXY Z PUNKTAMI ---
 
   const handleCheckboxChange = (e, category, val) => {
     setAllScores((prevScores) => {
@@ -166,11 +154,11 @@ const categoryLabels = {
       if (!newScores[currentRound - 1]) {
         newScores[currentRound - 1] = {};
       }
-      // Jeśli checkbox jest zaznaczany, przypisujemy wartość
+
       if (e.target.checked) {
         newScores[currentRound - 1][category] = val;
       } else {
-        // Odznaczenie – resetujemy wartość do 0
+
         newScores[currentRound - 1][category] = 0;
       }
       return newScores;
@@ -182,11 +170,11 @@ const categoryLabels = {
     return allScores[currentRound - 1][category] === val;
   };
 
-  // --- NASTĘPNA RUNDA / RESET INPUTÓW ---
+
 
   const nextRound = () => {
     if (currentRound === parseInt(rounds, 10)) {
-      // Koniec gry – przejdziemy do ekranu podsumowania
+
       setCurrentRound(0);
       return;
     }
@@ -208,7 +196,7 @@ const categoryLabels = {
     setLocked(false);
   };
 
-  // --- WYNIK KOŃCOWY ---
+
 
   const getFinalScore = () => {
     let sum = 0;
@@ -222,10 +210,9 @@ const categoryLabels = {
     return sum;
   };
 
-  // --- ZAKOŃCZ GRĘ I POWRÓT DO EKRANU GŁÓWNEGO ---
 
   const endGame = () => {
-    // Jeśli chcemy wyczyścić localStorage całkowicie:
+
     localStorage.removeItem("panstwaMiastaGameState");
 
     setShowMainMenu(true);
@@ -247,10 +234,9 @@ const categoryLabels = {
     setAllScores([]);
   };
 
-  // --- NOWA GRA (z ekranu końcowego) ---
 
   const restartGame = () => {
-    // Możemy też wyczyścić localStorage, by rozpocząć w pełni nową grę
+
     localStorage.removeItem("panstwaMiastaGameState");
 
     setShowRoundsMenu(true);
@@ -271,9 +257,7 @@ const categoryLabels = {
     setAllScores([]);
   };
 
-  // --- RENDEROWANIE ---
 
-  // 1. Ekran główny
   if (showMainMenu) {
     return (
       <div className="main">
@@ -283,7 +267,7 @@ const categoryLabels = {
     );
   }
 
-  // 2. Menu z wyborem liczby rund
+
   if (showRoundsMenu) {
     return (
       <div className="rounds">
@@ -300,13 +284,11 @@ const categoryLabels = {
     );
   }
 
-  // 3. Część główna rozgrywki (gdy currentRound > 0 i <= rounds)
   if (currentRound > 0 && currentRound <= rounds) {
     return (
       <div className="game">
         <h2>Runda {currentRound} z {rounds}</h2>
 
-        {/* Pokazuj przycisk „Losuj literę” tylko, gdy nie zatwierdziliśmy jeszcze słów */}
         {!locked && (
           <>
             <button className="losuj" onClick={drawLetter} disabled={!!currentLetter}>
@@ -316,7 +298,7 @@ const categoryLabels = {
           </>
         )}
 
-        {/* Inputy pojawiają się tylko, gdy nie są zablokowane */}
+
         {!locked && (
           <div className="inputs">
             <label>
@@ -377,18 +359,16 @@ const categoryLabels = {
           </div>
         )}
 
-        {/* Przycisk „Zatwierdź słowa” też tylko gdy nie zablokowane */}
         {!locked && (
           <button className="zatwierdz" onClick={lockWords}>Zatwierdź słowa</button>
         )}
 
-        {/* Sekcja wyboru punktów (checkboxy) – widoczna dopiero PO zatwierdzeniu słów */}
         {locked && (
           <div className="scores">
           {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
           {Object.keys(words).map((category) => (
             <div key={category} className="score-row">
-              {/* Wyświetlamy nazwę kategorii i wpisaną wartość */}
+
               <span className="score-label">
                 {categoryLabels[category]}: {words[category]}
               </span>
@@ -398,7 +378,7 @@ const categoryLabels = {
                   <label key={val} className="checkbox-label">
                     <input
                       type="checkbox"
-                      value={val} // Atrybut "value" (do stylowania w checkboxie, jeśli chcesz)
+                      value={val} 
                       checked={isCheckboxChecked(category, val)}
                       onChange={(e) => handleCheckboxChange(e, category, val)}
                     />
@@ -415,7 +395,6 @@ const categoryLabels = {
     );
   }
 
-  // 4. Po ukończeniu wszystkich rund (currentRound === 0) - ekran podsumowania
   if (currentRound === 0 && !showMainMenu && !showRoundsMenu) {
     const finalScore = getFinalScore();
 
@@ -429,7 +408,6 @@ const categoryLabels = {
     );
   }
 
-  // Zwracamy null w przypadku nieobsłużonego stanu (teoretycznie nie powinno się zdarzyć)
   return null;
 }
 
