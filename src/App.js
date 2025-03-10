@@ -1,21 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
   // Alfabet z pominięciem liter: Ą, Ć, Ę, Q, X, Y, Z
   const ALPHABET = [
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "Ł",
-    "M", "N", "Ń", "O", "Ó", "P", "R", "S", "Ś", "T", "U", "W", "Ź", "Ż"
+    "M", "N","O","P", "R", "S", "T", "U", "W"
   ];
 
-  const [showMainMenu, setShowMainMenu] = useState(true); // Ekran główny (przycisk "Nowa Gra")
-  const [showRoundsMenu, setShowRoundsMenu] = useState(false); // Menu z wyborem liczby rund
-  const [rounds, setRounds] = useState(0); // Ilość rund
-  const [currentRound, setCurrentRound] = useState(0); // Aktualnie rozgrywana runda
-  const [usedLetters, setUsedLetters] = useState([]); // Już wylosowane litery w danej grze
-  const [currentLetter, setCurrentLetter] = useState(""); // Wylosowana litera na daną rundę
+  // --- STANY APLIKACJI ---
 
-  // Słowa wpisywane przez gracza
+  const [showMainMenu, setShowMainMenu] = useState(true);
+  const [showRoundsMenu, setShowRoundsMenu] = useState(false);
+  const [rounds, setRounds] = useState("");
+  const [currentRound, setCurrentRound] = useState("");
+  const [usedLetters, setUsedLetters] = useState([]);
+  const [currentLetter, setCurrentLetter] = useState("");
+  // W górnej części pliku (np. obok innych stałych):
+const categoryLabels = {
+  panstwo: "Państwo",
+  miasto: "Miasto",
+  imie: "Imię",
+  zwierze: "Zwierzę",
+  rzecz: "Rzecz",
+  zbiornik: "Zbiornik wodny",
+  roslina: "Roślina"
+};
+
+
   const [words, setWords] = useState({
     panstwo: "",
     miasto: "",
@@ -26,20 +38,79 @@ function App() {
     roslina: "",
   });
 
-  // Czy inputy zostały zablokowane ("Zatwierdź słowa")
   const [locked, setLocked] = useState(false);
 
   // Przechowuje punkty z każdej rundy i kategorii
-  // Struktura: [ { panstwo: X, miasto: Y, ... }, { ... }, ... ]
+  // Przykład struktury: [ { panstwo: X, miasto: Y, ... }, { ... }, ... ]
   const [allScores, setAllScores] = useState([]);
 
-  // ------ Obsługa ekranu głównego ------
+
+  // --- FUNKCJE POMOCNICZE ---
+
+  // 1. Wczytanie stanu z localStorage przy pierwszym uruchomieniu
+  useEffect(() => {
+    const savedState = localStorage.getItem("panstwaMiastaGameState");
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+
+        // Ustawiamy poszczególne stany tylko wtedy, gdy istnieją w zapisie
+        setShowMainMenu(parsed.showMainMenu ?? true);
+        setShowRoundsMenu(parsed.showRoundsMenu ?? false);
+        setRounds(parsed.rounds ?? 0);
+        setCurrentRound(parsed.currentRound ?? 0);
+        setUsedLetters(parsed.usedLetters ?? []);
+        setCurrentLetter(parsed.currentLetter ?? "");
+        setWords(parsed.words ?? {
+          panstwo: "",
+          miasto: "",
+          imie: "",
+          zwierze: "",
+          rzecz: "",
+          zbiornik: "",
+          roslina: "",
+        });
+        setLocked(parsed.locked ?? false);
+        setAllScores(parsed.allScores ?? []);
+      } catch (error) {
+        console.warn("Błąd przy wczytywaniu stanu z localStorage:", error);
+      }
+    }
+  }, []);
+
+  // 2. Zapisywanie stanu do localStorage przy każdej zmianie wybranych stanów
+  useEffect(() => {
+    const stateToSave = {
+      showMainMenu,
+      showRoundsMenu,
+      rounds,
+      currentRound,
+      usedLetters,
+      currentLetter,
+      words,
+      locked,
+      allScores,
+    };
+    localStorage.setItem("panstwaMiastaGameState", JSON.stringify(stateToSave));
+  }, [
+    showMainMenu,
+    showRoundsMenu,
+    rounds,
+    currentRound,
+    usedLetters,
+    currentLetter,
+    words,
+    locked,
+    allScores,
+  ]);
+
+  // --- ROZPOCZĘCIE NOWEJ GRY ---
+
   const startNewGame = () => {
     setShowMainMenu(false);
     setShowRoundsMenu(true);
   };
 
-  // ------ Obsługa wyboru liczby rund ------
   const handleRoundsChange = (e) => {
     setRounds(e.target.value);
   };
@@ -55,7 +126,8 @@ function App() {
     }
   };
 
-  // ------ Losowanie litery ------
+  // --- LOSOWANIE LITERY ---
+
   const drawLetter = () => {
     const availableLetters = ALPHABET.filter((letter) => !usedLetters.includes(letter));
     if (availableLetters.length === 0) {
@@ -68,7 +140,8 @@ function App() {
     setUsedLetters((prev) => [...prev, letter]);
   };
 
-  // ------ Obsługa inputów ------
+  // --- OBSŁUGA INPUTÓW ---
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (!locked) {
@@ -79,47 +152,44 @@ function App() {
     }
   };
 
-  // ------ Zatwierdzanie słów (blokada inputów) ------
+  // --- ZATWIERDZENIE SŁÓW ---
+
   const lockWords = () => {
     setLocked(true);
   };
 
-  // ------ Zmiana wartości punktów (checkboxy) ------
-  // Tylko jeden checkbox może być zaznaczony w danej kategorii, więc jeśli
-  // ktoś kliknie w nowy checkbox, ustawiamy tę wartość, a jeśli odznaczy – ustawiamy 0
+  // --- CHECKBOXY Z PUNKTAMI ---
+
   const handleCheckboxChange = (e, category, val) => {
     setAllScores((prevScores) => {
       const newScores = [...prevScores];
       if (!newScores[currentRound - 1]) {
         newScores[currentRound - 1] = {};
       }
-      // Jeśli właśnie "zaznaczyliśmy" checkbox:
+      // Jeśli checkbox jest zaznaczany, przypisujemy wartość
       if (e.target.checked) {
         newScores[currentRound - 1][category] = val;
       } else {
-        // Odznaczenie tego samego checkboxa – ustawia wartość punktów na 0
+        // Odznaczenie – resetujemy wartość do 0
         newScores[currentRound - 1][category] = 0;
       }
       return newScores;
     });
   };
 
-  // Pomocnicza funkcja do sprawdzania, czy w danej kategorii
-  // w aktualnej rundzie jest wybrana wartość `val`
   const isCheckboxChecked = (category, val) => {
-    // Jeśli nie ma w ogóle wpisu dla tej rundy, zwracamy false
     if (!allScores[currentRound - 1]) return false;
     return allScores[currentRound - 1][category] === val;
   };
 
-  // ------ Przechodzenie do następnej rundy ------
+  // --- NASTĘPNA RUNDA / RESET INPUTÓW ---
+
   const nextRound = () => {
-    // Jeśli aktualna runda to ostatnia, pokażemy wynik końcowy
     if (currentRound === parseInt(rounds, 10)) {
+      // Koniec gry – przejdziemy do ekranu podsumowania
       setCurrentRound(0);
       return;
     }
-    // Inaczej przechodzimy do kolejnej
     setCurrentRound((prev) => prev + 1);
     resetInputsAndLock();
   };
@@ -138,7 +208,8 @@ function App() {
     setLocked(false);
   };
 
-  // ------ Obliczanie wyniku końcowego ------
+  // --- WYNIK KOŃCOWY ---
+
   const getFinalScore = () => {
     let sum = 0;
     allScores.forEach((roundObj) => {
@@ -151,8 +222,12 @@ function App() {
     return sum;
   };
 
-  // ------ Zakończ grę i reset do ekranu głównego ------
+  // --- ZAKOŃCZ GRĘ I POWRÓT DO EKRANU GŁÓWNEGO ---
+
   const endGame = () => {
+    // Jeśli chcemy wyczyścić localStorage całkowicie:
+    localStorage.removeItem("panstwaMiastaGameState");
+
     setShowMainMenu(true);
     setShowRoundsMenu(false);
     setRounds(0);
@@ -172,8 +247,12 @@ function App() {
     setAllScores([]);
   };
 
-  // ------ Restart gry (nowa gra) ------
+  // --- NOWA GRA (z ekranu końcowego) ---
+
   const restartGame = () => {
+    // Możemy też wyczyścić localStorage, by rozpocząć w pełni nową grę
+    localStorage.removeItem("panstwaMiastaGameState");
+
     setShowRoundsMenu(true);
     setRounds(0);
     setCurrentRound(0);
@@ -192,42 +271,45 @@ function App() {
     setAllScores([]);
   };
 
-  // Ekran główny
+  // --- RENDEROWANIE ---
+
+  // 1. Ekran główny
   if (showMainMenu) {
     return (
       <div className="main">
-        <button onClick={startNewGame}>Nowa Gra</button>
+        <a className="text"><p>Witaj!</p> <p>w grze Państwa Miata</p></a>
+        <button className="nowa" onClick={startNewGame}>Nowa Gra</button>
       </div>
     );
   }
 
-  // Menu z wyborem liczby rund
+  // 2. Menu z wyborem liczby rund
   if (showRoundsMenu) {
     return (
       <div className="rounds">
         <h2>Podaj liczbę rund</h2>
-        <input
+        <input className="liczbarund"
           type="number"
           min="1"
           value={rounds}
           onChange={handleRoundsChange}
-          placeholder="np. 5"
+          placeholder="Podaj liczbę rund"
         />
         <button onClick={startRounds}>Rozpocznij Grę</button>
       </div>
     );
   }
 
-  // Jeśli rozgrywka trwa i currentRound <= rounds
+  // 3. Część główna rozgrywki (gdy currentRound > 0 i <= rounds)
   if (currentRound > 0 && currentRound <= rounds) {
     return (
       <div className="game">
         <h2>Runda {currentRound} z {rounds}</h2>
-        
+
         {/* Pokazuj przycisk „Losuj literę” tylko, gdy nie zatwierdziliśmy jeszcze słów */}
         {!locked && (
           <>
-            <button onClick={drawLetter} disabled={!!currentLetter}>
+            <button className="losuj" onClick={drawLetter} disabled={!!currentLetter}>
               Losuj Literę
             </button>
             {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
@@ -238,72 +320,58 @@ function App() {
         {!locked && (
           <div className="inputs">
             <label>
-              Państwo:
-              <input
+              <input className="wartosc" placeholder="Państwo"
                 name="panstwo"
                 value={words.panstwo}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
 
             <label>
-              Miasto:
-              <input
+              <input className="wartosc" placeholder="Miasto"
                 name="miasto"
                 value={words.miasto}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
 
             <label>
-              Imię:
-              <input
+              <input className="wartosc" placeholder="Imię"
                 name="imie"
                 value={words.imie}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
 
             <label>
-              Zwierzę:
-              <input
+              <input className="wartosc" placeholder="Zwierzę"
                 name="zwierze"
                 value={words.zwierze}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
 
             <label>
-              Rzecz:
-              <input
+              <input className="wartosc" placeholder="Rzecz"
                 name="rzecz"
                 value={words.rzecz}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
 
             <label>
-              Zbiornik wodny:
-              <input
+              <input className="wartosc" placeholder="Zbiornik wodny"
                 name="zbiornik"
                 value={words.zbiornik}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
 
             <label>
-              Roślina:
-              <input
+              <input className="wartosc" placeholder="Roślina"
                 name="roslina"
                 value={words.roslina}
                 onChange={handleInputChange}
-                disabled={locked}
               />
             </label>
           </div>
@@ -311,38 +379,43 @@ function App() {
 
         {/* Przycisk „Zatwierdź słowa” też tylko gdy nie zablokowane */}
         {!locked && (
-          <button onClick={lockWords}>Zatwierdź słowa</button>
+          <button className="zatwierdz" onClick={lockWords}>Zatwierdź słowa</button>
         )}
 
         {/* Sekcja wyboru punktów (checkboxy) – widoczna dopiero PO zatwierdzeniu słów */}
         {locked && (
           <div className="scores">
-            {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
-            {Object.keys(words).map((category) => (
-              <div key={category} className="score-row">
-                <span className="score-label">{words[category]}:</span>
-                <div className="checkbox-group">
-                  {[0, 5, 10, 15].map((val) => (
-                    <label key={val} className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={isCheckboxChecked(category, val)}
-                        onChange={(e) => handleCheckboxChange(e, category, val)}
-                      />
-                      {val}
-                    </label>
-                  ))}
-                </div>
+          {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
+          {Object.keys(words).map((category) => (
+            <div key={category} className="score-row">
+              {/* Wyświetlamy nazwę kategorii i wpisaną wartość */}
+              <span className="score-label">
+                {categoryLabels[category]}: {words[category]}
+              </span>
+        
+              <div className="checkbox-group">
+                {[0, 5, 10, 15].map((val) => (
+                  <label key={val} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      value={val} // Atrybut "value" (do stylowania w checkboxie, jeśli chcesz)
+                      checked={isCheckboxChecked(category, val)}
+                      onChange={(e) => handleCheckboxChange(e, category, val)}
+                    />
+                  </label>
+                ))}
               </div>
-            ))}
-            <button onClick={nextRound}>Następna runda</button>
-          </div>
+            </div>
+          ))}
+          <button className="nastepna" onClick={nextRound}>Następna runda</button>
+        </div>
+        
         )}
       </div>
     );
   }
 
-  // Po ukończeniu wszystkich rund - wynik końcowy
+  // 4. Po ukończeniu wszystkich rund (currentRound === 0) - ekran podsumowania
   if (currentRound === 0 && !showMainMenu && !showRoundsMenu) {
     const finalScore = getFinalScore();
 
@@ -356,7 +429,7 @@ function App() {
     );
   }
 
-  // W razie czego zwracamy null (nie powinno wystąpić)
+  // Zwracamy null w przypadku nieobsłużonego stanu (teoretycznie nie powinno się zdarzyć)
   return null;
 }
 

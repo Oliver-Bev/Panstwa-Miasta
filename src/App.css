@@ -16,7 +16,7 @@ body {
 }
 
 /* Główne kontenery centujące zawartość */
-.main, .rounds, .game, .summary {
+.rounds, .game, .summary {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -24,33 +24,79 @@ body {
   padding: 20px;
   text-align: center;
   margin: auto;
+  height: 100dvh;
+}
+.main{
+  height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+.text{
+  font-size: 30px;
+}
+.nowa{
+  font-size: 20px;
+}
+.losuj{
+  font-size: 15px;
+}
+.wartosc{
+  background-color: transparent;
+  border: 1px solid white;
+  border-radius: 20px;
+  outline: none;
+  padding: 10px;
+  font-size: 15px;
+  color: white;
+  text-align: center;
+  margin: 5px;
+}
+::placeholder {
+  color: white;
+  text-align: center;
+}
+.zatwierdz{
+  font-size: 15px;
+}
+.nastepna{
+  font-size: 15px;
+}
+input[type].liczbarund{
+  width: 70%;
 }
 
 /* Przycisk */
 button {
   cursor: pointer;
   border: none;
-  background-color: #444;
+  background-color: transparent;
+  border: 1px solid white;
+  border-radius: 50px;
   color: #fff;
   font-size: 1rem;
   padding: 10px 20px;
+  font-size: 20px;
   margin: 10px;
   transition: background-color 0.3s ease;
 }
 
 button:hover {
-  background-color: #666;
+  background-color: transparent;
 }
 
 /* Pola tekstowe */
 input[type="number"],
 input[type="text"] {
-  background-color: #222;
-  border: 1px solid #555;
+  background-color: transparent;
+  border: 1px solid white;
+  border-radius: 50px;
   color: #fff;
-  padding: 8px;
+  padding: 10px;
   margin: 5px;
-  width: 200px;
+  width: 100px;
 }
 
 label {
@@ -97,15 +143,52 @@ label {
 
 /* Opakowanie pojedynczego checkboxa */
 .checkbox-label {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 5px;
+  display: inline-block;    /* lub flex, w zależności od potrzeb */
+  position: relative;
+  margin: 5px;
+}
+
+/* Sam checkbox */
+.checkbox-label input[type="checkbox"] {
+  /* Usuwamy domyślny wygląd */
+  appearance: none;         
+  -webkit-appearance: none; 
+  -moz-appearance: none;    
+  width: 35px;
+  height: 35px;
+  border: 1px solid white;
+  background-color: transparent;
+  cursor: pointer;
+  color: #fff;  /* kolor tekstu, który wstawimy przez ::before */
+  text-align: center; 
+  vertical-align: middle;
+  border-radius: 5px;
+}
+
+/* 
+   Pseudoelement (treść pojawi się wizualnie
+   "w środku" samego inputa) 
+*/
+.checkbox-label input[type="checkbox"]::before {
+  content: attr(value);  /* Wstawiamy to, co jest w atrybucie "value" */
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  line-height: 31px; /* dostosuj, by tekst był wycentrowany w pionie */
+  font-size: 1rem;   
+  /* Zwróć uwagę, by line-height i font-size pasowały do rozmiaru boxa */
+}
+
+/* Styl checkboxa, gdy jest zaznaczony */
+.checkbox-label input[type="checkbox"]:checked {
+  background-color: white;     /* inny kolor tła, np. ciemniejszy */
+  border-color: black; 
+  color: black;        /* i zmiana koloru obramowania */
 }
 
 /* Checkbox */
 input[type="checkbox"] {
-  width: 16px;
+  width: 20px;
   height: 16px;
 }
 
@@ -117,7 +200,7 @@ input[type="checkbox"] {
   }
 
   button {
-    width: 100%;
+    width: 50%;
     margin: 5px 0;
   }
 
