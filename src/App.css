@@ -16,7 +16,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  font-size: 16px; /* Base font size */
+  font-size: 16px;
 }
 
 .rounds,
@@ -227,7 +227,6 @@ input[type="checkbox"] {
   }
 }
 
-/* Dodatkowe style dla historii gry */
 .history {
   display: flex;
   flex-direction: column;
@@ -311,31 +310,25 @@ input[type="checkbox"] {
   }
 }
 
-/* iOS PWA specific styles */
+
 @supports (-webkit-touch-callout: none) {
-  /* CSS specific to iOS devices */
   body {
-    /* Prevent overscroll bounce effect */
     position: fixed;
     width: 100%;
     height: 100%;
     overflow: hidden;
   }
-
   .rounds,
   .game,
   .summary,
   .history,
   .main {
-    /* Allow scrolling within these containers */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 }
 
-/* Hide Safari UI components when added to home screen */
 @media (display-mode: standalone) {
-  /* Adjust for iOS safe areas */
   .rounds,
   .game,
   .summary,

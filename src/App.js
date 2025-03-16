@@ -128,12 +128,10 @@ const categoryLabels = {
   };
 
   const drawLetter = () => {
-    // Instead of filtering out used letters, we'll directly draw from the full alphabet
     const randomIndex = Math.floor(Math.random() * ALPHABET.length);
     const letter = ALPHABET[randomIndex];
     setCurrentLetter(letter);
-    
-    // Still track used letters for history/statistics, but don't filter by them
+
     setUsedLetters((prev) => [...prev, letter]);
   };
 
@@ -189,7 +187,6 @@ const categoryLabels = {
   };
 
   const nextRound = () => {
-    // Save current round data to history before moving to next round
     saveRoundToHistory();
     
     if (currentRound === parseInt(rounds, 10)) {
