@@ -8,14 +8,14 @@ function App() {
     "M", "N","O","P", "R", "S", "T", "U", "W"
   ];
 
-
-
   const [showMainMenu, setShowMainMenu] = useState(true);
   const [showRoundsMenu, setShowRoundsMenu] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [rounds, setRounds] = useState("");
   const [currentRound, setCurrentRound] = useState("");
   const [usedLetters, setUsedLetters] = useState([]);
   const [currentLetter, setCurrentLetter] = useState("");
+  const [gameHistory, setGameHistory] = useState([]);
 
 const categoryLabels = {
   panstwo: "Państwo",
@@ -52,6 +52,7 @@ const categoryLabels = {
 
         setShowMainMenu(parsed.showMainMenu ?? true);
         setShowRoundsMenu(parsed.showRoundsMenu ?? false);
+        setShowHistory(parsed.showHistory ?? false);
         setRounds(parsed.rounds ?? 0);
         setCurrentRound(parsed.currentRound ?? 0);
         setUsedLetters(parsed.usedLetters ?? []);
@@ -67,6 +68,7 @@ const categoryLabels = {
         });
         setLocked(parsed.locked ?? false);
         setAllScores(parsed.allScores ?? []);
+        setGameHistory(parsed.gameHistory ?? []);
       } catch (error) {
         console.warn("Błąd przy wczytywaniu stanu z localStorage:", error);
       }
@@ -78,6 +80,7 @@ const categoryLabels = {
     const stateToSave = {
       showMainMenu,
       showRoundsMenu,
+      showHistory,
       rounds,
       currentRound,
       usedLetters,
@@ -85,11 +88,13 @@ const categoryLabels = {
       words,
       locked,
       allScores,
+      gameHistory,
     };
     localStorage.setItem("panstwaMiastaGameState", JSON.stringify(stateToSave));
   }, [
     showMainMenu,
     showRoundsMenu,
+    showHistory,
     rounds,
     currentRound,
     usedLetters,
@@ -97,6 +102,7 @@ const categoryLabels = {
     words,
     locked,
     allScores,
+    gameHistory,
   ]);
 
 
@@ -116,19 +122,18 @@ const categoryLabels = {
       setCurrentRound(1);
       setUsedLetters([]);
       setAllScores([]);
+      setGameHistory([]);
       resetInputsAndLock();
     }
   };
 
   const drawLetter = () => {
-    const availableLetters = ALPHABET.filter((letter) => !usedLetters.includes(letter));
-    if (availableLetters.length === 0) {
-      alert("Wykorzystano już wszystkie dostępne litery!");
-      return;
-    }
-    const randomIndex = Math.floor(Math.random() * availableLetters.length);
-    const letter = availableLetters[randomIndex];
+    // Instead of filtering out used letters, we'll directly draw from the full alphabet
+    const randomIndex = Math.floor(Math.random() * ALPHABET.length);
+    const letter = ALPHABET[randomIndex];
     setCurrentLetter(letter);
+    
+    // Still track used letters for history/statistics, but don't filter by them
     setUsedLetters((prev) => [...prev, letter]);
   };
 
@@ -170,11 +175,24 @@ const categoryLabels = {
     return allScores[currentRound - 1][category] === val;
   };
 
-
+  const saveRoundToHistory = () => {
+    setGameHistory(prevHistory => {
+      const newHistory = [...prevHistory];
+      newHistory[currentRound - 1] = {
+        round: currentRound,
+        letter: currentLetter,
+        words: {...words},
+        scores: allScores[currentRound - 1] || {}
+      };
+      return newHistory;
+    });
+  };
 
   const nextRound = () => {
+    // Save current round data to history before moving to next round
+    saveRoundToHistory();
+    
     if (currentRound === parseInt(rounds, 10)) {
-
       setCurrentRound(0);
       return;
     }
@@ -196,8 +214,6 @@ const categoryLabels = {
     setLocked(false);
   };
 
-
-
   const getFinalScore = () => {
     let sum = 0;
     allScores.forEach((roundObj) => {
@@ -210,13 +226,20 @@ const categoryLabels = {
     return sum;
   };
 
+  const showGameHistory = () => {
+    setShowHistory(true);
+  };
+
+  const hideGameHistory = () => {
+    setShowHistory(false);
+  };
 
   const endGame = () => {
-
     localStorage.removeItem("panstwaMiastaGameState");
 
     setShowMainMenu(true);
     setShowRoundsMenu(false);
+    setShowHistory(false);
     setRounds(0);
     setCurrentRound(0);
     setUsedLetters([]);
@@ -232,14 +255,15 @@ const categoryLabels = {
     });
     setLocked(false);
     setAllScores([]);
+    setGameHistory([]);
   };
 
 
   const restartGame = () => {
-
     localStorage.removeItem("panstwaMiastaGameState");
 
     setShowRoundsMenu(true);
+    setShowHistory(false);
     setRounds(0);
     setCurrentRound(0);
     setUsedLetters([]);
@@ -255,6 +279,7 @@ const categoryLabels = {
     });
     setLocked(false);
     setAllScores([]);
+    setGameHistory([]);
   };
 
 
@@ -291,7 +316,7 @@ const categoryLabels = {
 
         {!locked && (
           <>
-            <button className="losuj" onClick={drawLetter} disabled={!!currentLetter}>
+            <button className="losuj" onClick={drawLetter}>
               Losuj Literę
             </button>
             {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
@@ -395,15 +420,43 @@ const categoryLabels = {
     );
   }
 
-  if (currentRound === 0 && !showMainMenu && !showRoundsMenu) {
+  if (showHistory) {
+    return (
+      <div className="history">
+        <h2>Historia Gry</h2>
+        <div className="history-container">
+          {gameHistory.map((roundData, index) => (
+            <div key={index} className="history-round">
+              <h3>Runda {roundData.round} - Litera: {roundData.letter}</h3>
+              <div className="history-words">
+                {Object.entries(roundData.words).map(([category, word]) => (
+                  <div key={category} className="history-word">
+                    <span className="history-category">{categoryLabels[category]}:</span> 
+                    <span className="history-value">{word}</span>
+                    <span className="history-score">
+                      {roundData.scores[category] ? `(${roundData.scores[category]} pkt)` : '(0 pkt)'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={hideGameHistory}>Powrót</button>
+      </div>
+    );
+  }
+
+  if (currentRound === 0 && !showMainMenu && !showRoundsMenu && !showHistory) {
     const finalScore = getFinalScore();
 
     return (
       <div className="summary">
         <h2>Koniec gry!</h2>
-        <h3>Twój łączny wynik: {finalScore} punktów</h3>
+        <h3>Wynik: {finalScore} punktów</h3>
         <button onClick={endGame}>Zakończ grę</button>
         <button onClick={restartGame}>Nowa Gra</button>
+        <button onClick={showGameHistory}>Historia gry</button>
       </div>
     );
   }
