@@ -283,7 +283,10 @@ const categoryLabels = {
   if (showMainMenu) {
     return (
       <div className="main">
-        <a className="text"><p>Witaj!</p> <p>w grze Państwa Misata</p></a>
+
+
+        <a className="text"><p>Witaj!</p> <p>w grze Państwa Miasta</p></a>
+
         <button className="nowa" onClick={startNewGame}>Nowa Gra</button>
       </div>
     );
