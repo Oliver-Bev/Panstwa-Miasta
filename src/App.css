@@ -85,7 +85,7 @@ input:focus::placeholder {
 }
 
 input[type].liczbarund {
-  width: 70%;
+  width: 250px;
 }
 
 button {
