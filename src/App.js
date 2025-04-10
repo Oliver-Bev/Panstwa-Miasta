@@ -1,422 +1,226 @@
-import React, { useState, useEffect } from "react";
-import "./App.css";
+// App.js z multiplayer + widoczność graczy w pokoju
+import React, { useState, useEffect } from 'react';
+import GameSetup from './GameSetup';
+import JoinRoom from './JoinRoom';
+import { supabase } from './supabaseClient';
+import './App.css';
 
 function App() {
+  const ALPHABET = ['A','B','C','D','E','F','G','H','I','J','K','L','Ł','M','N','O','P','R','S','T','U','W'];
 
-  const ALPHABET = [
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "Ł",
-    "M", "N","O","P", "R", "S", "T", "U", "W"
-  ];
-
-  const [showMainMenu, setShowMainMenu] = useState(true);
-  const [showRoundsMenu, setShowRoundsMenu] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [rounds, setRounds] = useState("");
-  const [currentRound, setCurrentRound] = useState("");
-  const [usedLetters, setUsedLetters] = useState([]);
-  const [currentLetter, setCurrentLetter] = useState("");
-  const [gameHistory, setGameHistory] = useState([]);
-
-const categoryLabels = {
-  panstwo: "Państwo",
-  miasto: "Miasto",
-  imie: "Imię",
-  zwierze: "Zwierzę",
-  rzecz: "Rzecz",
-  zbiornik: "Zbiornik wodny",
-  roslina: "Roślina"
-};
-
-
-  const [words, setWords] = useState({
-    panstwo: "",
-    miasto: "",
-    imie: "",
-    zwierze: "",
-    rzecz: "",
-    zbiornik: "",
-    roslina: "",
-  });
-
+  const [view, setView] = useState('menu');
+  const [roomCode, setRoomCode] = useState(null);
+  const [nickname, setNickname] = useState(null);
+  const [isHost, setIsHost] = useState(false);
+  const [gameState, setGameState] = useState(null);
+  const [words, setWords] = useState({ panstwo: '', miasto: '', imie: '', zwierze: '', rzecz: '', zbiornik: '', roslina: '' });
   const [locked, setLocked] = useState(false);
-
   const [allScores, setAllScores] = useState([]);
+  const [gameHistory, setGameHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
-
-
-  useEffect(() => {
-    const savedState = localStorage.getItem("panstwaMiastaGameState");
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-
-        setShowMainMenu(parsed.showMainMenu ?? true);
-        setShowRoundsMenu(parsed.showRoundsMenu ?? false);
-        setShowHistory(parsed.showHistory ?? false);
-        setRounds(parsed.rounds ?? 0);
-        setCurrentRound(parsed.currentRound ?? 0);
-        setUsedLetters(parsed.usedLetters ?? []);
-        setCurrentLetter(parsed.currentLetter ?? "");
-        setWords(parsed.words ?? {
-          panstwo: "",
-          miasto: "",
-          imie: "",
-          zwierze: "",
-          rzecz: "",
-          zbiornik: "",
-          roslina: "",
-        });
-        setLocked(parsed.locked ?? false);
-        setAllScores(parsed.allScores ?? []);
-        setGameHistory(parsed.gameHistory ?? []);
-      } catch (error) {
-        console.warn("Błąd przy wczytywaniu stanu z localStorage:", error);
-      }
-    }
-  }, []);
-
+  const categoryLabels = {
+    panstwo: 'Państwo', miasto: 'Miasto', imie: 'Imię', zwierze: 'Zwierzę', rzecz: 'Rzecz', zbiornik: 'Zbiornik wodny', roslina: 'Roślina'
+  };
 
   useEffect(() => {
-    const stateToSave = {
-      showMainMenu,
-      showRoundsMenu,
-      showHistory,
-      rounds,
-      currentRound,
-      usedLetters,
-      currentLetter,
-      words,
-      locked,
-      allScores,
-      gameHistory,
+    if (!roomCode) return;
+
+    const channel = supabase
+      .channel(`room-${roomCode}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `room_code=eq.${roomCode}` }, (payload) => {
+        const newState = JSON.parse(payload.new.game_state);
+        setGameState(newState);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    localStorage.setItem("panstwaMiastaGameState", JSON.stringify(stateToSave));
-  }, [
-    showMainMenu,
-    showRoundsMenu,
-    showHistory,
-    rounds,
-    currentRound,
-    usedLetters,
-    currentLetter,
-    words,
-    locked,
-    allScores,
-    gameHistory,
-  ]);
+  }, [roomCode]);
 
+  useEffect(() => {
+    if (!gameState) return;
+    if (gameState.currentRound > 0 && view !== 'game' && view !== 'summary') setView('game');
+    if (gameState.currentRound === 0 && view === 'game') setView('summary');
+  }, [gameState]);
 
-  const startNewGame = () => {
-    setShowMainMenu(false);
-    setShowRoundsMenu(true);
+  const updateGameState = async (newState) => {
+    setGameState(newState);
+    await supabase.from('rooms').update({ game_state: JSON.stringify(newState) }).eq('room_code', roomCode);
   };
 
-  const handleRoundsChange = (e) => {
-    setRounds(e.target.value);
-  };
 
-  const startRounds = () => {
-    const numberOfRounds = parseInt(rounds, 10);
-    if (numberOfRounds > 0) {
-      setShowRoundsMenu(false);
-      setCurrentRound(1);
-      setUsedLetters([]);
-      setAllScores([]);
-      setGameHistory([]);
-      resetInputsAndLock();
+  useEffect(() => {
+    if (!nickname || !gameState || isHost) return;
+  
+    console.log('Gracz', nickname, 'próbuje się dodać...');
+  
+    if (!gameState.players.find(p => p.name === nickname)) {
+      const updated = {
+        ...gameState,
+        players: [...(gameState.players || []), { name: nickname }]
+      };
+      console.log('Dodajemy gracza:', nickname);
+      updateGameState(updated);
     }
+  }, [nickname, gameState]);
+  
+  const handleRoomCreated = (code) => {
+    const initialState = {
+      players: [{ name: 'Host' }],
+      currentRound: 0,
+      currentLetter: '',
+      roundStarted: false
+    };
+    updateGameState(initialState);
+    setRoomCode(code);
+    setNickname('Host');
+    setIsHost(true);
+    setView('waiting');
   };
+
+  const handleJoinSuccess = (code, name) => {
+    setRoomCode(code);
+    setNickname(name);
+    setIsHost(false);
+    setView('waiting');
+  };
+
+  useEffect(() => {
+    if (!nickname || !gameState || isHost) return;
+    if (!gameState.players.find(p => p.name === nickname)) {
+      const updated = { ...gameState, players: [...(gameState.players || []), { name: nickname }] };
+      updateGameState(updated);
+    }
+  }, [nickname, gameState]);
 
   const drawLetter = () => {
-    const randomIndex = Math.floor(Math.random() * ALPHABET.length);
-    const letter = ALPHABET[randomIndex];
-    setCurrentLetter(letter);
-
-    setUsedLetters((prev) => [...prev, letter]);
+    const letter = ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+    updateGameState({ ...gameState, currentLetter: letter, roundStarted: true });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (!locked) {
-      setWords((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    if (!locked) setWords((prev) => ({ ...prev, [name]: value }));
   };
 
-
-  const lockWords = () => {
-    setLocked(true);
-  };
-
+  const lockWords = () => setLocked(true);
 
   const handleCheckboxChange = (e, category, val) => {
-    setAllScores((prevScores) => {
-      const newScores = [...prevScores];
-      if (!newScores[currentRound - 1]) {
-        newScores[currentRound - 1] = {};
-      }
-
-      if (e.target.checked) {
-        newScores[currentRound - 1][category] = val;
-      } else {
-
-        newScores[currentRound - 1][category] = 0;
-      }
-      return newScores;
+    setAllScores((prev) => {
+      const copy = [...prev];
+      const roundIndex = (gameState?.currentRound ?? 1) - 1;
+      if (!copy[roundIndex]) copy[roundIndex] = {};
+      copy[roundIndex][category] = e.target.checked ? val : 0;
+      return copy;
     });
   };
 
   const isCheckboxChecked = (category, val) => {
-    if (!allScores[currentRound - 1]) return false;
-    return allScores[currentRound - 1][category] === val;
+    const roundIndex = (gameState?.currentRound ?? 1) - 1;
+    return allScores[roundIndex]?.[category] === val;
   };
 
   const saveRoundToHistory = () => {
-    setGameHistory(prevHistory => {
-      const newHistory = [...prevHistory];
-      newHistory[currentRound - 1] = {
-        round: currentRound,
-        letter: currentLetter,
-        words: {...words},
-        scores: allScores[currentRound - 1] || {}
-      };
-      return newHistory;
+    const roundIndex = (gameState?.currentRound ?? 1) - 1;
+    setGameHistory((prev) => {
+      const copy = [...prev];
+      copy[roundIndex] = { round: gameState.currentRound, letter: gameState.currentLetter, words: { ...words }, scores: allScores[roundIndex] || {} };
+      return copy;
     });
   };
 
   const nextRound = () => {
     saveRoundToHistory();
-    
-    if (currentRound === parseInt(rounds, 10)) {
-      setCurrentRound(0);
-      return;
-    }
-    setCurrentRound((prev) => prev + 1);
-    resetInputsAndLock();
-  };
-
-  const resetInputsAndLock = () => {
-    setCurrentLetter("");
-    setWords({
-      panstwo: "",
-      miasto: "",
-      imie: "",
-      zwierze: "",
-      rzecz: "",
-      zbiornik: "",
-      roslina: "",
-    });
+    updateGameState({ ...gameState, currentRound: gameState.currentRound + 1, currentLetter: '', roundStarted: false });
+    setWords({ panstwo: '', miasto: '', imie: '', zwierze: '', rzecz: '', zbiornik: '', roslina: '' });
     setLocked(false);
   };
 
-  const getFinalScore = () => {
-    let sum = 0;
-    allScores.forEach((roundObj) => {
-      if (roundObj) {
-        Object.values(roundObj).forEach((val) => {
-          sum += val;
-        });
-      }
-    });
-    return sum;
-  };
+  const getFinalScore = () => allScores.reduce((sum, r) => sum + (r ? Object.values(r).reduce((s, v) => s + v, 0) : 0), 0);
 
-  const showGameHistory = () => {
-    setShowHistory(true);
-  };
+  if (view === 'menu') return (
+    <div className="main">
+      <a className="text"><p>Witaj!</p> <p>w grze Państwa Miasta</p></a>
+      <button onClick={() => setView('create')}>Stwórz Pokój</button>
+      <button onClick={() => setView('join')}>Dołącz do Pokoju</button>
+    </div>
+  );
 
-  const hideGameHistory = () => {
-    setShowHistory(false);
-  };
+  if (view === 'create') return <GameSetup onRoomCreated={handleRoomCreated} />;
+  if (view === 'join') return <JoinRoom onJoinSuccess={handleJoinSuccess} />;
 
-  const endGame = () => {
-    localStorage.removeItem("panstwaMiastaGameState");
-
-    setShowMainMenu(true);
-    setShowRoundsMenu(false);
-    setShowHistory(false);
-    setRounds(0);
-    setCurrentRound(0);
-    setUsedLetters([]);
-    setCurrentLetter("");
-    setWords({
-      panstwo: "",
-      miasto: "",
-      imie: "",
-      zwierze: "",
-      rzecz: "",
-      zbiornik: "",
-      roslina: "",
-    });
-    setLocked(false);
-    setAllScores([]);
-    setGameHistory([]);
-  };
-
-
-  const restartGame = () => {
-    localStorage.removeItem("panstwaMiastaGameState");
-
-    setShowRoundsMenu(true);
-    setShowHistory(false);
-    setRounds(0);
-    setCurrentRound(0);
-    setUsedLetters([]);
-    setCurrentLetter("");
-    setWords({
-      panstwo: "",
-      miasto: "",
-      imie: "",
-      zwierze: "",
-      rzecz: "",
-      zbiornik: "",
-      roslina: "",
-    });
-    setLocked(false);
-    setAllScores([]);
-    setGameHistory([]);
-  };
-
-
-  if (showMainMenu) {
+  if (view === 'waiting') {
+    const players = gameState?.players || [];
     return (
-      <div className="main">
-
-
-
-        <a className="text"><p>Witaj!</p> <p>w grze Państwa Miasta</p></a>
-
-        <button className="nowa" onClick={startNewGame}>Nowa Gra</button>
+      <div className="waiting">
+        <h2>Pokój: {roomCode}</h2>
+        <p>{nickname ? `Cześć, ${nickname}!` : ''}</p>
+        <p>Gracze ({players.length}/5):</p>
+        <ul>
+          {players.map((p, i) => (
+            <li key={i}>{p.name}</li>
+          ))}
+        </ul>
+        {isHost && (
+          <button onClick={() => updateGameState({ ...gameState, currentRound: 1, currentLetter: '', roundStarted: false })}>
+            Rozpocznij Grę
+          </button>
+        )}
       </div>
     );
   }
 
-
-  if (showRoundsMenu) {
-    return (
-      <div className="rounds">
-        <h2>Podaj liczbę rund</h2>
-        <input className="liczbarund"
-          type="number"
-          min="1"
-          value={rounds}
-          onChange={handleRoundsChange}
-          placeholder="Podaj liczbę rund"
-        />
-        <button onClick={startRounds}>Rozpocznij Grę</button>
-      </div>
-    );
-  }
-
-  if (currentRound > 0 && currentRound <= rounds) {
+  if (view === 'game' && gameState?.currentRound > 0) {
     return (
       <div className="game">
-        <h2>Runda {currentRound} z {rounds}</h2>
-
-        {!locked && (
+        <h2>Runda {gameState.currentRound}</h2>
+        {!gameState.roundStarted && isHost && <button className="losuj" onClick={drawLetter}>Losuj Literę</button>}
+        {gameState.roundStarted && (
           <>
-            <button className="losuj" onClick={drawLetter}>
-              Losuj Literę
-            </button>
-            {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
-          </>
-        )}
-
-
-        {!locked && (
-          <div className="inputs">
-            <label>
-              <input className="wartosc" placeholder="Państwo"
-                name="panstwo"
-                value={words.panstwo}
-                onChange={handleInputChange}
-              />
-            </label>
-
-            <label>
-              <input className="wartosc" placeholder="Miasto"
-                name="miasto"
-                value={words.miasto}
-                onChange={handleInputChange}
-              />
-            </label>
-
-            <label>
-              <input className="wartosc" placeholder="Imię"
-                name="imie"
-                value={words.imie}
-                onChange={handleInputChange}
-              />
-            </label>
-
-            <label>
-              <input className="wartosc" placeholder="Zwierzę"
-                name="zwierze"
-                value={words.zwierze}
-                onChange={handleInputChange}
-              />
-            </label>
-
-            <label>
-              <input className="wartosc" placeholder="Rzecz"
-                name="rzecz"
-                value={words.rzecz}
-                onChange={handleInputChange}
-              />
-            </label>
-
-            <label>
-              <input className="wartosc" placeholder="Zbiornik wodny"
-                name="zbiornik"
-                value={words.zbiornik}
-                onChange={handleInputChange}
-              />
-            </label>
-
-            <label>
-              <input className="wartosc" placeholder="Roślina"
-                name="roslina"
-                value={words.roslina}
-                onChange={handleInputChange}
-              />
-            </label>
-          </div>
-        )}
-
-        {!locked && (
-          <button className="zatwierdz" onClick={lockWords}>Zatwierdź słowa</button>
-        )}
-
-        {locked && (
-          <div className="scores">
-          {currentLetter && <h3>Wylosowana litera: {currentLetter}</h3>}
-          {Object.keys(words).map((category) => (
-            <div key={category} className="score-row">
-
-              <span className="score-label">
-                {categoryLabels[category]}: {words[category]}
-              </span>
-        
-              <div className="checkbox-group">
-                {[0, 5, 10, 15].map((val) => (
-                  <label key={val} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      value={val} 
-                      checked={isCheckboxChecked(category, val)}
-                      onChange={(e) => handleCheckboxChange(e, category, val)}
-                    />
+            <h3>Wylosowana litera: {gameState.currentLetter}</h3>
+            {!locked && (
+              <div className="inputs">
+                {Object.keys(words).map((key) => (
+                  <label key={key}>
+                    <input className="wartosc" placeholder={categoryLabels[key]} name={key} value={words[key]} onChange={handleInputChange} />
                   </label>
                 ))}
               </div>
-            </div>
-          ))}
-          <button className="nastepna" onClick={nextRound}>Następna runda</button>
-        </div>
-        
+            )}
+            {!locked && <button onClick={lockWords}>Zatwierdź słowa</button>}
+            {locked && (
+              <div className="scores">
+                {Object.keys(words).map((category) => (
+                  <div key={category} className="score-row">
+                    <span className="score-label">{categoryLabels[category]}: {words[category]}</span>
+                    <div className="checkbox-group">
+                      {[0, 5, 10, 15].map((val) => (
+                        <label key={val} className="checkbox-label">
+                          <input type="checkbox" value={val} checked={isCheckboxChecked(category, val)} onChange={(e) => handleCheckboxChange(e, category, val)} />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {isHost && <button className="nastepna" onClick={nextRound}>Następna runda</button>}
+              </div>
+            )}
+          </>
         )}
+      </div>
+    );
+  }
+
+  if (view === 'summary') {
+    const finalScore = getFinalScore();
+    return (
+      <div className="summary">
+        <h2>Koniec gry!</h2>
+        <h3>Wynik: {finalScore} punktów</h3>
+        <button onClick={() => setView('menu')}>Powrót do menu</button>
+        <button onClick={() => setShowHistory(true)}>Historia gry</button>
       </div>
     );
   }
@@ -432,32 +236,16 @@ const categoryLabels = {
               <div className="history-words">
                 {Object.entries(roundData.words).map(([category, word]) => (
                   <div key={category} className="history-word">
-                    <span className="history-category">{categoryLabels[category]}:</span> 
+                    <span className="history-category">{categoryLabels[category]}:</span>
                     <span className="history-value">{word}</span>
-                    <span className="history-score">
-                      {roundData.scores[category] ? `(${roundData.scores[category]} pkt)` : '(0 pkt)'}
-                    </span>
+                    <span className="history-score">{roundData.scores[category] ? `(${roundData.scores[category]} pkt)` : '(0 pkt)'}</span>
                   </div>
                 ))}
               </div>
             </div>
           ))}
         </div>
-        <button onClick={hideGameHistory}>Powrót</button>
-      </div>
-    );
-  }
-
-  if (currentRound === 0 && !showMainMenu && !showRoundsMenu && !showHistory) {
-    const finalScore = getFinalScore();
-
-    return (
-      <div className="summary">
-        <h2>Koniec gry!</h2>
-        <h3>Wynik: {finalScore} punktów</h3>
-        <button onClick={endGame}>Zakończ grę</button>
-        <button onClick={restartGame}>Nowa Gra</button>
-        <button onClick={showGameHistory}>Historia gry</button>
+        <button onClick={() => setShowHistory(false)}>Powrót</button>
       </div>
     );
   }
