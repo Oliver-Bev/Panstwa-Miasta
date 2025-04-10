@@ -89,6 +89,26 @@ function App() {
 
   useEffect(() => {
     if (!nickname || !gameState || isHost) return;
+  
+    console.log('🔍 Sprawdzam czy gracz już istnieje:', nickname);
+    console.log('📦 Obecni gracze:', gameState.players);
+  
+    if (!gameState.players.find(p => p.name === nickname)) {
+      console.log('➕ Dodajemy gracza:', nickname);
+  
+      const updated = {
+        ...gameState,
+        players: [...(gameState.players || []), { name: nickname }]
+      };
+      updateGameState(updated);
+    } else {
+      console.log('✅ Gracz już istnieje w pokoju:', nickname);
+    }
+  }, [nickname, gameState]);
+  
+
+  useEffect(() => {
+    if (!nickname || !gameState || isHost) return;
     if (!gameState.players.find(p => p.name === nickname)) {
       const updated = { ...gameState, players: [...(gameState.players || []), { name: nickname }] };
       updateGameState(updated);
@@ -153,16 +173,21 @@ function App() {
 
   if (view === 'waiting') {
     const players = gameState?.players || [];
+
     return (
       <div className="waiting">
         <h2>Pokój: {roomCode}</h2>
         <p>{nickname ? `Cześć, ${nickname}!` : ''}</p>
         <p>Gracze ({players.length}/5):</p>
-        <ul>
+
+        <ul key={players.map(p => p.name).join(',')}>
           {players.map((p, i) => (
-            <li key={i}>{p.name}</li>
+            <li key={p.name + i}>{p.name}</li>
           ))}
         </ul>
+
+  
+
         {isHost && (
           <button onClick={() => updateGameState({ ...gameState, currentRound: 1, currentLetter: '', roundStarted: false })}>
             Rozpocznij Grę
